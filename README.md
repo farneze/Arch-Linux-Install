@@ -46,7 +46,9 @@ Install [rufus](https://rufus.ie/)
 
 #### Linux
 
-> _#_ `tar -xzOf archlinux-YYYY-MM-DD.iso | dd of=/dev/sdb1 bs=4M status=progress && sync`
+```console
+# tar -xzOf archlinux-YYYY-MM-DD.iso | dd of=/dev/sdb1 bs=4M status=progress && sync
+```
 
 ## First boot
 
@@ -56,16 +58,27 @@ When booted, select:
 
 Connect to wifi
 
-> _#_ `iwctl station wlan0 connect MyWifiIsThis --passphrase PaSsPhRaSe`
+```console
+# iwctl station wlan0 connect MyWifiIsThis --passphrase PaSsPhRaSe
+```
 
 List devices
-> _#_ `lsblk`
+
+```console
+# lsblk
+```
 
 Erase disk
-> _#_ `dd if=/dev/zero of=/dev/sda bs=16M count=1`
+
+```console
+# dd if=/dev/zero of=/dev/sda bs=16M count=1
+```
 
 Tool for defining partitions:
-> _#_ `cfdisk`
+
+```console
+# cfdisk
+```
 
 And partitions set for EFI boot
 | Partition | Size    | Type             |
@@ -78,40 +91,48 @@ Format and mount partions
 
 - Linux filesystem
 
-    > _#_ `mkfs.btrfs -L "Arch Linux" /dev/sda3`
-    >
-    > _#_ `mount -o defaults,relatime,discard,ssd /dev/sda3 /mnt`
+```console
+# mkfs.btrfs -L "Arch Linux" /dev/sda3`
+# mount -o defaults,relatime,discard,ssd /dev/sda3 /mnt
+```
 
 - Linux SWAP
 
-    > _#_ `mkswap -L "swap" /dev/sda2`
-    >
-    > _#_ `swapon /dev/sda2`
+```console
+# mkswap -L "swap" /dev/sda2
+swapon /dev/sda2
+```
 
 - EFI System
 
-    > _#_ `mkfs.fat -F32 /dev/sda1`
-    >
-    > _#_ `mkdir /mnt/boot`
-    >
-    > _#_ `mount /dev/sda1 /mnt/boot`
+```console
+# mkfs.fat -F32 /dev/sda1
+# mkdir /mnt/boot
+# mount /dev/sda1 /mnt/boot
+```
 
 ## Initial Configuration
 
 Setting time:
 
-> _#_ `timedatectl set-timezone America/Sao_Paulo`
->
-> _#_ `timedatectl set-ntp true`
+```console
+# timedatectl set-timezone America/Sao_Paulo`
+timedatectl set-ntp true`
+```
 
 Packages:
-> _#_ `pacman -S wget git`
+
+```console
+# pacman -S wget git`
+```
 
 Brazilian mirrors:
-> _#_ `wget -O mirrorlist.b "https://archlinux.org/mirrorlist/?country=BR"`
->
-> _#_ `sed -i 's/^#//' mirrorlist.b`
-`rankmirrors -n 8 mirrorlist.b > /etc/pacman.d/mirrorlist`
+
+```console
+# wget -O mirrorlist.b "https://archlinux.org/mirrorlist/?country=BR"
+# sed -i 's/^#//' mirrorlist.b
+# rankmirrors -n 8 mirrorlist.b > /etc/pacman.d/mirrorlist
+```
 
 Pacman config:
 
@@ -124,137 +145,217 @@ On `sudo nano /etc/pacman.conf`
 ## Install Arch
 
 Base install
-> _#_ `pacstrap /mnt base base-devel`
+
+```console
+# pacstrap /mnt base base-devel`
+```
 
 Copy partition tables to partition
-> _#_ `genfstab -U /mnt >> /mnt/etc/fstab`
+
+```console
+# genfstab -U /mnt >> /mnt/etc/fstab`
+```
 
 Change root to new system
-> _#_ `arch-chroot /mnt`
+
+```console
+# arch-chroot /mnt`
+```
 
 ## Configure Arch
 
 Set locale (UTF)
-> _#_ `nano /etc/locale.gen`
->
-> _#_ `locale-gen`
+
+```console
+# nano /etc/locale.gen
+# locale-gen
+```
 
 Create `locale.conf` file
-> _#_ `echo "LANG=en_US.UTF-8" > /etc/locale.conf`
+
+```console
+# echo "LANG=en_US.UTF-8" > /etc/locale.conf`
+```
 
 Create keyboard map
-> _#_ `echo "KEYMAP=de-latin1" > /etc/vconsole.conf`
+
+```console
+# echo "KEYMAP=de-latin1" > /etc/vconsole.conf`
+```
 
 Set Root password
-> _$_ `passwd`
+
+```console
+# passwd
+```
 
 Set time zone
-> _#_ `ln -sf /usr/share/zoneinfo/$(curl https://ipapi.co/timezone) /etc/localtime`
+
+```console
+# ln -sf /usr/share/zoneinfo/$(curl https://ipapi.co/timezone) /etc/localtime
+```
 
 Adjust clock
-> _#_ `hwclock --systohc`
+
+```console
+# hwclock --systohc
+```
 
 Set machine name
-> _#_ `echo "machinename" > /etc/hostname`
+
+```console
+# echo "machinename" > /etc/hostname
+```
 
 Set `localhost` file to `/etc/hosts`
-> _#_ `echo "127.0.0.1   localhost" >> /etc/hosts`
->
-> _#_ `echo "::1   localhost" >> /etc/hosts`
->
-> _#_ `echo "127.0.1.1   machinename.localdomain machinename" >> /etc/hosts`
+
+```console
+# echo "127.0.0.1   localhost" >> /etc/hosts
+# echo "::1   localhost" >> /etc/hosts
+# echo "127.0.1.1   machinename.localdomain machinename" >> /etc/hosts
+```
 
 Add user
-> _#_ `useradd -m -g users -G wheel,storage,power -s /bin/zsh arnthor passwd arnthor`
+
+```console
+# useradd -m -g users -G wheel,storage,power -s /bin/zsh arnthor passwd arnthor
+```
 
 ## mkinitcpio
 
 Edit mkinitcpio
-> _#_ `nano /etc/mkinitcpio.conf`
+
+```console
+# nano /etc/mkinitcpio.conf
+```
 
 Under `#HOOKS`
 
 - if using `btrfs` add it after `udev`
 - if using laptop with external keyboard, place `keyboard` before `autodetect`
 
-> _#_ `HOOKS=(base udev btrfs keyboard autodetect modconf block filesystems fsck)`
-
+> HOOKS=(base udev btrfs keyboard autodetect modconf block filesystems fsck)`
 
 Under `#COMPRESSION`, uncomment LZ4. [link](https://www.dummeraugust.com/main/content/blog/posts.php?pid=173)
-> _#_ `COMPRESSION="lz4"`
 
+> COMPRESSION="lz4"`
+
+## < -- correct -- >
 
 mkinitcpio -p linux
 
 Install bootloader
-> _#_ `pacman -S linux linux-firmware grub efibootmgr intel-ucode sudo`
+
+```console
+# pacman -S linux linux-firmware grub efibootmgr intel-ucode sudo
+```
 
 ## Packages
 
 Complementary install
-> _#_ `pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g`
+
+```console
+# pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g
+```
 
 Btrfs packages
-> _#_ `btrfs-progs snapper`
+
+```console
+# btrfs-progs snapper
+```
 
 Terminal utilities
-> _#_ `pacman -S iwd dhcpcd zsh zsh-doc vi vim nano lynx curl bat wget`
+
+```console
+# pacman -S iwd dhcpcd zsh zsh-doc vi vim nano lynx curl bat wget
+```
 
 Battery info
-> _#_ `pacman -S tpacpi-bat`
+
+```console
+# pacman -S tpacpi-bat
+```
 
 Fonts
-> _#_ `pacman -S ttf-liberation`
+
+```console
+# pacman -S ttf-liberation
+```
 
 Test
-> _#_ `pacman -S iproute2 (?)`
+
+```console
+# pacman -S iproute2 (?)
+```
 
 ## GRUB
 
 Install
-> _#_ `grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB`
->
-> _#_ `grub-mkconfig -o /boot/grub/grub.cfg`
+
+```console
+# grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+# grub-mkconfig -o /boot/grub/grub.cfg
+```
 
 ## Edit mkinitcpio
 
 Exit, umount any partitions and reboot
-> _#_ `exit`
->
-> _#_ `umount -R /mnt`
->
-> _#_ `reboot`
 
+```console
+# exit
+# umount -R /mnt
+# reboot
+```
 
 ## Configs
 
 - iwd
 
-    /etc/NetworkManager/conf.d/wifi_backend.conf
+```console
+# nano /etc/NetworkManager/conf.d/wifi_backend.conf
+```
 
-    [device]
-    wifi.backend=iwd
-
+>[device]
+>
+>wifi.backend=iwd
 
 ## Other Packages
 
 Terminal tools
-> _#_ `pacman -S htop tree openssh`
+
+```console
+# pacman -S htop tree openssh
+```
 
 Dev tools
-> _#_ `pacman -S git code python npm`
+
+```console
+# pacman -S git code python npm
+```
 
 Thinkpad install
-> _#_ `pacman -S`
+
+```console
+# pacman -S
+```
 
 Common programs
-> _#_ `pacman -S deluge deluge-gtk steam alacritty mpv youtube-dl telegram discord virtualbox keepassxc`
+
+```console
+# pacman -S deluge deluge-gtk steam alacritty mpv youtube-dl telegram discord virtualbox keepassxc
+```
 
 Edition programs
-> _#_ `pacman -S obs-studio`
+
+```console
+# pacman -S obs-studio
+```
 
 Playful programs
-> _#_ `pacman -S cmatrix neofetch figlet lolcat nyancat cowsay ponysay`
+
+```console
+# pacman -S cmatrix neofetch figlet lolcat nyancat cowsay ponysay
+```
 
 ##### For programs who asked, i used
 ###### Steam 3 - 3
@@ -264,61 +365,80 @@ Playful programs
 
 ## Cleaning
 
-> _#_ `sudo pacman -Rsn $(pacman -Qdtq)`
-> _#_ `sudo pacman -Sc`
+```console
+# sudo pacman -Rsn $(pacman -Qdtq)
+# sudo pacman -Sc
+```
 
 ## Start and enable services
 
-> _#_ `systemctl enable iwd.service --now`
-> _#_ `systemctl enable dhcpd.service --now`
-> _#_ `systemctl enable sshd.service --now`
-> _#_ `systemctl enable ssdm.service --now`
+```console
+# systemctl enable iwd.service --now
+# systemctl enable dhcpd.service --now
+# systemctl enable sshd.service --now
+# systemctl enable ssdm.service --now
+```
 
 ## Theming
 
 Nord theme for grep:
-> _#_ `export GREP_COLORS='ms=01;38;2;136;192;208'`
+
+```console
+# export GREP_COLORS='ms=01;38;2;136;192;208'
+```
 
 Nord theme for LS:
-> _#_ ``
+
+```console
+#
+```
 
 Nord theme for man:
-> _#_ ``
 
 Nord theme for pacman:
-
-> _#_ ``
 
 ## Pacman commands
 
 List all availlable packages which match **name**:
-> _#_ `pacman -Ss` [**name**]
+
+```console
+pacman -Ss [ name ]
+```
 
 Installs package whith **name**:
-> _#_ `pacman -S` [**name**]
+
+```console
+# pacman -S [ name ]
+```
 
 List all explicitly installed packages:
-> _#_ `pacman -Qe`
+
+```console
+# pacman -Qe
+```
 
 List all foreign packages (typically manually downloaded and installed or packages removed from the repositories):
-> _#_ `pacman -Qm`
+
+```console
+# pacman -Qm
+```
 
 List all explicitly installed native packages (i.e. present in the sync database) that are not direct or optional dependencies:
-> _#_ `pacman -Qent`
+
+```console
+# pacman -Qent
+```
 
 ## Aliases
 
-> _#_ `alias pacman='sudo pacman -S --needed'`
->
-> _#_ `alias grep='grep --color=auto'`
->
-> _#_ `alias cat='bat'`
->
-> _#_ `alias mounte='mount -o gid=users,fmask=113,dmask=002 /dev/sdb1 /mnt/external/'`
->
-> _#_ `alias umounte='umount /mnt/external/'`
->
-> _#_ `alias weather='curl http://wttr.in/sao_paulo'`
+```console
+# alias pacman='sudo pacman -S --needed'
+# alias grep='grep --color=auto'
+# alias cat='bat'
+# alias mounte='mount -o gid=users,fmask=113,dmask=002 /dev/sdb1 /mnt/external/'
+# alias umounte='umount /mnt/external/'
+# alias weather='curl http://wttr.in/sao_paulo'
+```
 
 ### To do / study
 
