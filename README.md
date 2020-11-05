@@ -30,13 +30,9 @@ The last one (`xhci_pci`) appears to me because I have a device with a Renesas U
 
 To fix it, ***as user*** and ***not as root***, install [this](https://aur.archlinux.org/packages/upd72020x-fw/) AUR package after initial install and reboot.
 
----
-
 ## Disclaimer
 
 This is intended to be a simplified version of [Arch Installation Guide](https://wiki.archlinux.org/index.php/installation_guide), focused on my notebook and personal preferences. Feel free to contact me to give suggestions and help me (and possible other fellows) on new features or a better way to do something.
-
----
 
 ## Steps
 
@@ -51,8 +47,6 @@ Install [rufus](https://rufus.ie/)
 #### Linux
 
 > _#_ `tar -xzOf archlinux-YYYY-MM-DD.iso | dd of=/dev/sdb1 bs=4M status=progress && sync`
-
----
 
 ## First boot
 
@@ -102,8 +96,6 @@ Format and mount partions
     >
     > _#_ `mount /dev/sda1 /mnt/boot`
 
----
-
 ## Initial Configuration
 
 Setting time:
@@ -129,8 +121,6 @@ On `sudo nano /etc/pacman.conf`
 - add `ILoveCandy`
 - uncomment [multilib] and `include` line
 
----
-
 ## Install Arch
 
 Base install
@@ -141,8 +131,6 @@ Copy partition tables to partition
 
 Change root to new system
 > _#_ `arch-chroot /mnt`
-
----
 
 ## Configure Arch
 
@@ -179,8 +167,6 @@ Set `localhost` file to `/etc/hosts`
 Add user
 > _#_ `useradd -m -g users -G wheel,storage,power -s /bin/zsh arnthor passwd arnthor`
 
----
-
 ## mkinitcpio
 
 Edit mkinitcpio
@@ -203,8 +189,6 @@ mkinitcpio -p linux
 Install bootloader
 > _#_ `pacman -S linux linux-firmware grub efibootmgr intel-ucode sudo`
 
----
-
 ## Packages
 
 Complementary install
@@ -225,16 +209,12 @@ Fonts
 Test
 > _#_ `pacman -S iproute2 (?)`
 
----
-
 ## GRUB
 
 Install
 > _#_ `grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB`
 >
 > _#_ `grub-mkconfig -o /boot/grub/grub.cfg`
-
----
 
 ## Edit mkinitcpio
 
@@ -244,8 +224,6 @@ Exit, umount any partitions and reboot
 > _#_ `umount -R /mnt`
 >
 > _#_ `reboot`
-
----
 
 
 ## Configs
@@ -257,8 +235,6 @@ Exit, umount any partitions and reboot
     [device]
     wifi.backend=iwd
 
-
----
 
 ## Other Packages
 
@@ -284,18 +260,12 @@ Playful programs
 ###### Steam 3 - 3
 ###### virtualbox 2
 
----
-
 ## AUR Packages
-
----
 
 ## Cleaning
 
 > _#_ `sudo pacman -Rsn $(pacman -Qdtq)`
 > _#_ `sudo pacman -Sc`
-
----
 
 ## Start and enable services
 
@@ -303,8 +273,6 @@ Playful programs
 > _#_ `systemctl enable dhcpd.service --now`
 > _#_ `systemctl enable sshd.service --now`
 > _#_ `systemctl enable ssdm.service --now`
-
----
 
 ## Theming
 
@@ -320,8 +288,6 @@ Nord theme for man:
 Nord theme for pacman:
 
 > _#_ ``
-
----
 
 ## Pacman commands
 
@@ -340,8 +306,6 @@ List all foreign packages (typically manually downloaded and installed or packag
 List all explicitly installed native packages (i.e. present in the sync database) that are not direct or optional dependencies:
 > _#_ `pacman -Qent`
 
----
-
 ## Aliases
 
 > _#_ `alias pacman='sudo pacman -S --needed'`
@@ -355,8 +319,6 @@ List all explicitly installed native packages (i.e. present in the sync database
 > _#_ `alias umounte='umount /mnt/external/'`
 >
 > _#_ `alias weather='curl http://wttr.in/sao_paulo'`
-
----
 
 ### To do / study
 
