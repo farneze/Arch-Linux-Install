@@ -1,13 +1,13 @@
-# Arch Install
+# **Arch Install**
 
-## System used
+## **System used**
 
 - Thinkpad T440p
-  - Processor: i7 4700mq
-  - Memory: 16 gb DDR3
-  - another test
+- Processor: i7 4700mq
+- Memory: 16 gb DDR3
+- another test
 
-## Known errors
+## **Known errors**
 
 ```console
 ==> WARNING: Possibly missing firmware for module: aic94xx
@@ -30,11 +30,11 @@ The last one (`xhci_pci`) appears to me because I have a device with a Renesas U
 
 To fix it, ***as user*** and ***not as root***, install [this](https://aur.archlinux.org/packages/upd72020x-fw/) AUR package after initial install and reboot.
 
-## Disclaimer
+### **Disclaimer**
 
 This is intended to be a simplified version of [Arch Installation Guide](https://wiki.archlinux.org/index.php/installation_guide), focused on my notebook and personal preferences. Feel free to contact me to give suggestions and help me (and possible other fellows) on new features or a better way to do something.
 
-## Steps
+## **Steps**
 
 ### Arch boot image
 
@@ -50,7 +50,7 @@ Install [rufus](https://rufus.ie/)
 # tar -xzOf archlinux-YYYY-MM-DD.iso | dd of=/dev/sdb1 bs=4M status=progress && sync
 ```
 
-## First boot
+## **First boot**
 
 When booted, select:
 
@@ -85,14 +85,14 @@ And partitions set for EFI boot
 | --------- |--------:| :----------------|
 | sda1      | 500MB   | EFI System       |
 | sda2      | 8G      | Linux SWAP       |
-| sda3      | `Rest`G | Linux filesystem |
+| sda3      | **Rest**G | Linux filesystem |
 
 Format and mount partions
 
 - Linux filesystem
 
 ```console
-# mkfs.btrfs -L "Arch Linux" /dev/sda3`
+# mkfs.btrfs -L "arch_os" /dev/sda3`
 # mount -o defaults,relatime,discard,ssd /dev/sda3 /mnt
 ```
 
@@ -111,19 +111,19 @@ swapon /dev/sda2
 # mount /dev/sda1 /mnt/boot
 ```
 
-## Initial Configuration
+## **Initial Configuration**
 
 Setting time:
 
 ```console
-# timedatectl set-timezone America/Sao_Paulo`
-timedatectl set-ntp true`
+# timedatectl set-timezone America/Sao_Paulo
+# timedatectl set-ntp true
 ```
 
 Packages:
 
 ```console
-# pacman -S wget git`
+# pacman -S wget git
 ```
 
 Brazilian mirrors:
@@ -136,33 +136,53 @@ Brazilian mirrors:
 
 Pacman config:
 
-On `sudo nano /etc/pacman.conf`
+```console
+# sudo nano /etc/pacman.conf
+```
 
 - uncomment `color`
 - add `ILoveCandy`
 - uncomment [multilib] and `include` line
 
-## Install Arch
+## **Install Arch**
 
 Base install
 
 ```console
-# pacstrap /mnt base base-devel`
+# pacstrap /mnt base base-devel linux linux-firmware
 ```
 
 Copy partition tables to partition
 
 ```console
-# genfstab -U /mnt >> /mnt/etc/fstab`
+# genfstab -U /mnt >> /mnt/etc/fstab
 ```
 
 Change root to new system
 
 ```console
-# arch-chroot /mnt`
+# arch-chroot /mnt
 ```
 
-## Configure Arch
+## **Configure Arch**
+
+Install kernel, micro code, sudo and other shell helpers
+
+```console
+# pacman -S intel-ucode sudo zsh zsh-doc vi vim nano curl wget
+```
+
+If file system is btrfs, also install
+
+```console
+# pacman -S btrfs-progs snapper
+```
+
+Install network
+
+```console
+# pacman -S iwd dhcpcd openssh
+```
 
 Set locale (UTF)
 
@@ -174,13 +194,13 @@ Set locale (UTF)
 Create `locale.conf` file
 
 ```console
-# echo "LANG=en_US.UTF-8" > /etc/locale.conf`
+# echo "LANG=en_US.UTF-8" > /etc/locale.conf
 ```
 
 Create keyboard map
 
 ```console
-# echo "KEYMAP=de-latin1" > /etc/vconsole.conf`
+# echo "KEYMAP=de-latin1" > /etc/vconsole.conf
 ```
 
 Set Root password
@@ -218,10 +238,23 @@ Set `localhost` file to `/etc/hosts`
 Add user
 
 ```console
-# useradd -m -g users -G wheel,storage,power -s /bin/zsh arnthor passwd arnthor
+# useradd -m -g users -G wheel,storage -s /bin/zsh arnthor passwd arnthor
 ```
 
-## mkinitcpio
+Configure users. Uncomment `#wheel` line and add below it `Defaults rootpw`
+
+Command:
+
+```console
+# EDITOR=nano visudo
+```
+
+Text:
+> %wheel ALL=(ALL) ALL
+>
+> Defaults rootpw
+
+## **Initial ram disk**
 
 Edit mkinitcpio
 
@@ -233,71 +266,82 @@ Under `#HOOKS`
 
 - if using `btrfs` add it after `udev`
 - if using laptop with external keyboard, place `keyboard` before `autodetect`
+- remove `udev` and insert `systemd`  
+(This [post](https://bbs.archlinux.org/viewtopic.php?id=170082) or this [one](https://bbs.archlinux.org/viewtopic.php?id=169988) confirms it)
 
-> HOOKS=(base udev btrfs keyboard autodetect modconf block filesystems fsck)`
+> HOOKS=(base systemd btrfs autodetect modconf block filesystems keyboard fsck)`
 
 Under `#COMPRESSION`, uncomment LZ4. [link](https://www.dummeraugust.com/main/content/blog/posts.php?pid=173)
 
-> COMPRESSION="lz4"`
+> #COMPRESSION="lzop"
+>
+> COMPRESSION="lz4"
+>
+> #COMPRESSION="zstd"
 
-## < -- correct -- >
-
-mkinitcpio -p linux
-
-Install bootloader
-
-```console
-# pacman -S linux linux-firmware grub efibootmgr intel-ucode sudo
-```
-
-## Packages
-
-Complementary install
+Generate initramfs
 
 ```console
-# pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g
+# mkinitcpio -p linux
 ```
 
-Btrfs packages
-
-```console
-# btrfs-progs snapper
-```
-
-Terminal utilities
-
-```console
-# pacman -S iwd dhcpcd zsh zsh-doc vi vim nano lynx curl bat wget
-```
-
-Battery info
-
-```console
-# pacman -S tpacpi-bat
-```
-
-Fonts
-
-```console
-# pacman -S ttf-liberation
-```
-
-Test
-
-```console
-# pacman -S iproute2 (?)
-```
-
-## GRUB
+## **Grub OR ...**
 
 Install
 
 ```console
+# pacman -S grub efibootmgr
+
 # grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+
 # grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-## Edit mkinitcpio
+Edit grub timeout to 0
+
+```console
+# nano /etc/default/grub
+```
+
+> GRUB_TIMEOUT=0
+
+And run `mkconfig` again
+
+```console
+# grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+## **... OR systemd-boot**
+
+Install
+
+```console
+# bootctl install
+```
+
+Edit `/esp/loader/loader.conf`
+
+> default  arch.conf
+>
+> editor   no
+
+Edit `/boot/loader/entries/arch.conf`
+> title Arch Linux
+>
+> linux /vmlinuz-linux
+>
+> initrd /intel-ucode.img
+>
+> initrd /initramfs-linux.img
+>
+> options root="LABEL=arch_os" rw
+
+```console
+    options sysrq_always_enabled=1
+    options zswap.enabled=1 zswap.compressor=lz4
+```
+
+## **Reboot**
 
 Exit, umount any partitions and reboot
 
@@ -307,9 +351,11 @@ Exit, umount any partitions and reboot
 # reboot
 ```
 
-## Configs
+## **Configs**
 
-- iwd
+### **iwd**
+
+Set iwd as wifi backend
 
 ```console
 # nano /etc/NetworkManager/conf.d/wifi_backend.conf
@@ -319,30 +365,90 @@ Exit, umount any partitions and reboot
 >
 >wifi.backend=iwd
 
-## Other Packages
+## **Update system**
+
+```console
+# pacman -Syyu
+```
+
+## **Packages**
+
+Complementary install
+
+```console
+# pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g exfat-utils
+```
+
+Xorg, WM or DE
+
+```console
+# pacman -S xorg xclip
+```
+
+Fonts
+
+```console
+# pacman -S ttf-liberation noto-fonts ttf-hack ttf-font-awesome ttf-roboto
+```
+
+Test
+
+```console
+# pacman -S iproute2 (?)
+```
 
 Terminal tools
 
 ```console
-# pacman -S htop tree openssh
+# pacman -S htop tree lsof mc
+```
+
+Archiving and Compression
+
+```console
+# pacman -S unzip unrar lha
+```
+
+Hardware tools
+
+```console
+# pacman -S lshw dmidecode lm_sensors
 ```
 
 Dev tools
 
 ```console
-# pacman -S git code python npm
+# pacman -S git hub code python npm
+```
+
+Media
+
+```console
+# pacman -S playerctl imagemagick ffmpeg gthumb
+```
+
+Online Tools
+
+```console
+# pacman -S pccze plowshare
 ```
 
 Thinkpad install
 
 ```console
-# pacman -S
+# pacman -S tpacpi-bat
 ```
 
 Common programs
 
 ```console
 # pacman -S deluge deluge-gtk steam alacritty mpv youtube-dl telegram discord virtualbox keepassxc
+```
+
+Terminal utilities
+
+```console
+# pacman -S bat
 ```
 
 Edition programs
@@ -357,11 +463,9 @@ Playful programs
 # pacman -S cmatrix neofetch figlet lolcat nyancat cowsay ponysay
 ```
 
-##### For programs who asked, i used
-###### Steam 3 - 3
-###### virtualbox 2
+## **AUR Packages**
 
-## AUR Packages
+dtrx pcmanfm-gtk3-git ranger-git redshift-gtk-git raccoon wcalc
 
 ## Cleaning
 
@@ -442,6 +546,8 @@ List all explicitly installed native packages (i.e. present in the sync database
 
 ### To do / study
 
-- KVM
+[] KVM
 - minimize initramfs
 - initramfs compression
+- Encrypt partitions
+- Automate (partially) install
