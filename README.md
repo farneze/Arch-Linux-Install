@@ -43,11 +43,14 @@ First download [Arch Linux ISO file](https://www.archlinux.org/download/).
 #### Windows
 
 Install [rufus](https://rufus.ie/)
+Open the program, select USB drive, select ISO. select GPT on Partition Scheme. Click start and select DD Image mode.
 
 #### Linux
 
+Create bootable USB drive using:
+
 ```console
-# tar -xzOf archlinux-YYYY-MM-DD.iso | dd of=/dev/sdb1 bs=4M status=progress && sync
+# sudo dd if=image.iso of=/dev/penpen bs=16M && sync
 ```
 
 ## **First boot**
@@ -81,10 +84,10 @@ Tool for defining partitions:
 ```
 
 And partitions set for EFI boot
-| Partition | Size    | Type             |
-| --------- |--------:| :----------------|
-| sda1      | 500MB   | EFI System       |
-| sda2      | 8G      | Linux SWAP       |
+| Partition | Size      | Type             |
+| --------- |----------:| :----------------|
+| sda1      | 500MB     | EFI System       |
+| sda2      | 8G        | Linux SWAP       |
 | sda3      | **Rest**G | Linux filesystem |
 
 Format and mount partions
@@ -371,24 +374,45 @@ Set iwd as wifi backend
 # pacman -Syyu
 ```
 
+## **Start and enable services**
+
+```console
+# systemctl enable iwd.service --now
+# systemctl enable dhcpcd.service --now
+# systemctl enable sshd.service --now
+```
+
+## **KDE OR...**
+
+Nord theme for grep:
+
+```console
+# pacman -S xorg plasma-meta kde-application-meta
+# systemctl enable ssdm.service --now
+```
+
+## **...OR DWM**
+
+Nord theme for grep:
+
+```console
+# pacman -S xorg-server xorg-xinit xorg-xrandr xorg-xsetroot
+# ./dmenuinstall.sh
+# ./dwminstall.sh
+```
+
 ## **Packages**
 
 Complementary install
 
 ```console
-# pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g exfat-utils
-```
-
-Xorg, WM or DE
-
-```console
-# pacman -S xorg xclip
+# pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g exfat-utils xclip
 ```
 
 Fonts
 
 ```console
-# pacman -S ttf-liberation noto-fonts ttf-hack ttf-font-awesome ttf-roboto
+# pacman -S ttf-liberation noto-fonts ttf-hack ttf-font-awesome ttf-roboto wqy-zenhei wqy-microhei wqy-microhei-lite
 ```
 
 Test
@@ -424,7 +448,7 @@ Dev tools
 Media
 
 ```console
-# pacman -S playerctl imagemagick ffmpeg gthumb
+# pacman -S feh playerctl imagemagick ffmpeg gthumb
 ```
 
 Online Tools
@@ -432,6 +456,8 @@ Online Tools
 ```console
 # pacman -S pccze plowshare
 ```
+
+sudo pacman --noconfirm -S   net-tools mtr traceroute dnsutils whois nmap wavemon gnome-nettool sshfs proxychains-ng powerpill
 
 Thinkpad install
 
@@ -457,6 +483,12 @@ Edition programs
 # pacman -S obs-studio
 ```
 
+Wallpaper tools
+
+```console
+# pacman -S python-pywal
+```
+
 Playful programs
 
 ```console
@@ -465,25 +497,28 @@ Playful programs
 
 ## **AUR Packages**
 
-dtrx pcmanfm-gtk3-git ranger-git redshift-gtk-git raccoon wcalc
-
-## Cleaning
+Installing YAY - AUR Helper
 
 ```console
-# sudo pacman -Rsn $(pacman -Qdtq)
-# sudo pacman -Sc
+git clone https://aur.archlinux.org/yay.git
+cd yay
+makepkg -sirc
 ```
 
-## Start and enable services
+Install AUR Packages
 
 ```console
-# systemctl enable iwd.service --now
-# systemctl enable dhcpd.service --now
-# systemctl enable sshd.service --now
-# systemctl enable ssdm.service --now
+yay -S dtrx pcmanfm-gtk3-git ranger-git redshift-gtk-git raccoon wcalc pipes
 ```
 
-## Theming
+## **Cleaning**
+
+```console
+# pacman -Rsn $(pacman -Qdtq)
+# pacman -Sc
+```
+
+## **Theming**
 
 Nord theme for grep:
 
@@ -535,19 +570,13 @@ List all explicitly installed native packages (i.e. present in the sync database
 
 ## Aliases
 
-```console
-# alias pacman='sudo pacman -S --needed'
-# alias grep='grep --color=auto'
-# alias cat='bat'
-# alias mounte='mount -o gid=users,fmask=113,dmask=002 /dev/sdb1 /mnt/external/'
-# alias umounte='umount /mnt/external/'
-# alias weather='curl http://wttr.in/sao_paulo'
-```
+Check .dot files
 
-### To do / study
+### **To do / study**
 
 [] KVM
 - minimize initramfs
 - initramfs compression
 - Encrypt partitions
 - Automate (partially) install
+- Create bin folder with scripts
