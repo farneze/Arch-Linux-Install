@@ -83,7 +83,7 @@ Tool for defining partitions:
 # cfdisk
 ```
 
-And partitions set for EFI boot
+And partitions set for EFI boot ([Swap size](https://docs.fedoraproject.org/en-US/Fedora/13/html/Installation_Guide/s2-diskpartrecommend-x86.html]))
 | Partition | Size      | Type             |
 | --------- |----------:| :----------------|
 | sda1      | 500MB     | EFI System       |
@@ -123,36 +123,19 @@ Setting time:
 # timedatectl set-ntp true
 ```
 
-Packages:
+Update mirrors and download wget
 
 ```console
-# pacman -S wget git
+# pacman -Syy
+# pacman -S wget
 ```
-
-Brazilian mirrors:
-
-```console
-# wget -O mirrorlist.b "https://archlinux.org/mirrorlist/?country=BR"
-# sed -i 's/^#//' mirrorlist.b
-# rankmirrors -n 8 mirrorlist.b > /etc/pacman.d/mirrorlist
-```
-
-Pacman config:
-
-```console
-# sudo nano /etc/pacman.conf
-```
-
-- uncomment `color`
-- add `ILoveCandy`
-- uncomment [multilib] and `include` line
 
 ## **Install Arch**
 
-Base install
+Base install (btrfs related -> btrfs-progs snapper)
 
 ```console
-# pacstrap /mnt base base-devel linux linux-firmware
+# pacstrap /mnt base base-devel btrfs-progs snapper linux linux-firmware
 ```
 
 Copy partition tables to partition
@@ -169,22 +152,34 @@ Change root to new system
 
 ## **Configure Arch**
 
+Starting alias
+
+```console
+# alias pac="sudo pacman -S --noconfirm --needed"
+```
+
 Install kernel, micro code, sudo and other shell helpers
 
 ```console
-# pacman -S intel-ucode sudo zsh zsh-doc vi vim nano curl wget
+# pac intel-ucode zsh zsh-doc zsh-completions vi vim nano wget
 ```
 
 If file system is btrfs, also install
 
 ```console
-# pacman -S btrfs-progs snapper
+# pac btrfs-progs 
 ```
 
 Install network
 
 ```console
-# pacman -S iwd dhcpcd openssh
+# pac iwd openssh dhcpcd
+```
+
+Set time zone
+
+```console
+# ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
 ```
 
 Set locale (UTF)
@@ -212,12 +207,6 @@ Set Root password
 # passwd
 ```
 
-Set time zone
-
-```console
-# ln -sf /usr/share/zoneinfo/$(curl https://ipapi.co/timezone) /etc/localtime
-```
-
 Adjust clock
 
 ```console
@@ -233,54 +222,63 @@ Set machine name
 Set `localhost` file to `/etc/hosts`
 
 ```console
-# echo "127.0.0.1   localhost" >> /etc/hosts
-# echo "::1   localhost" >> /etc/hosts
-# echo "127.0.1.1   machinename.localdomain machinename" >> /etc/hosts
+# nano /etc/hosts
+-------------------hosts------------------
+127.0.0.1   localhost
+::1   localhost
+127.0.1.1   machinename.localdomain machinename
+------------------------------------------
 ```
 
 Add user
 
 ```console
-# useradd -m -g users -G wheel,storage -s /bin/zsh arnthor passwd arnthor
+# useradd -m -g users -G wheel,storage -s /bin/zsh arnthor -p arnthor
+```
+
+Change default editor to nano (default: vi)
+
+```console
+# export EDITOR=nano
 ```
 
 Configure users. Uncomment `#wheel` line and add below it `Defaults rootpw`
 
-Command:
-
 ```console
-# EDITOR=nano visudo
+# nano /etc/sudoers
+------------------sudoers-----------------
+...
+%wheel ALL=(ALL) ALL
+Defaults rootpw
+...
+------------------------------------------
 ```
 
-Text:
-> %wheel ALL=(ALL) ALL
->
-> Defaults rootpw
 
 ## **Initial ram disk**
 
-Edit mkinitcpio
+Edit mkinitcpio, and under `#HOOKS`:
 
-```console
-# nano /etc/mkinitcpio.conf
-```
-
-Under `#HOOKS`
-
-- if using `btrfs` add it after `udev`
 - if using laptop with external keyboard, place `keyboard` before `autodetect`
 - remove `udev` and insert `systemd`  
 (This [post](https://bbs.archlinux.org/viewtopic.php?id=170082) or this [one](https://bbs.archlinux.org/viewtopic.php?id=169988) confirms it)
+- if using `btrfs` add it after `systemd` (or `udev` if you didnt add systemd)
 
-> HOOKS=(base systemd btrfs autodetect modconf block filesystems keyboard fsck)`
+Under `#COMPRESSION`:
+ - uncomment LZ4. [link](https://www.dummeraugust.com/main/content/blog/posts.php?pid=173)
 
-Under `#COMPRESSION`, uncomment LZ4. [link](https://www.dummeraugust.com/main/content/blog/posts.php?pid=173)
-
-> #COMPRESSION="lzop"
->
-> COMPRESSION="lz4"
->
-> #COMPRESSION="zstd"
+```console
+# nano /etc/mkinitcpio.conf
+--------------mkinitcpio.conf-------------
+...
+HOOKS=(base systemd btrfs keyboard autodetect modconf block filesystems fsck)`
+...
+#COMPRESSION="lzop"
+COMPRESSION="lz4"
+#COMPRESSION="zstd"
+...
+------------------------------------------
+```
 
 Generate initramfs
 
@@ -293,10 +291,8 @@ Generate initramfs
 Install
 
 ```console
-# pacman -S grub efibootmgr
-
+# pac  grub efibootmgr
 # grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
-
 # grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
@@ -304,9 +300,8 @@ Edit grub timeout to 0
 
 ```console
 # nano /etc/default/grub
+GRUB_TIMEOUT=0
 ```
-
-> GRUB_TIMEOUT=0
 
 And run `mkconfig` again
 
@@ -322,26 +317,32 @@ Install
 # bootctl install
 ```
 
-Edit `/esp/loader/loader.conf`
+Add systemd-boot necessary files:
+```console
+# nano /boot/loader/entries/arch.conf
+-----------------arch.conf----------------
+title Arch Linux
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /initramfs-linux.img
+options root="LABEL=arch_os" rw
+options sysrq_always_enabled=1
+------------------------------------------
+```
 
-> default  arch.conf
->
-> editor   no
-
-Edit `/boot/loader/entries/arch.conf`
-> title Arch Linux
->
-> linux /vmlinuz-linux
->
-> initrd /intel-ucode.img
->
-> initrd /initramfs-linux.img
->
-> options root="LABEL=arch_os" rw
+Add above ???
+```console
+    options zswap.enabled=1 zswap.compressor=lz4
+```
 
 ```console
-    options sysrq_always_enabled=1
-    options zswap.enabled=1 zswap.compressor=lz4
+# nano /boot/loader/loader.conf
+----------------loader.conf---------------
+timeout 0
+# default a5e5f7c9baf5e4....-*
+default  arch.conf
+editor   no
+------------------------------------------
 ```
 
 ## **Reboot**
@@ -354,171 +355,242 @@ Exit, umount any partitions and reboot
 # reboot
 ```
 
-## **Configs**
+# **OS Config**
 
-### **iwd**
-
-Set iwd as wifi backend
-
-```console
-# nano /etc/NetworkManager/conf.d/wifi_backend.conf
-```
-
->[device]
->
->wifi.backend=iwd
-
-## **Update system**
+Pacman config:
+- uncomment `Color`
+- add `ILoveCandy` (optional)
+- uncomment [multilib] and `include` line
 
 ```console
-# pacman -Syyu
+# nano /etc/pacman.conf
+----------------pacman.conf---------------
+...
+# Misc options
+#UseSyslog
+Color
+#TotalDownload
+CheckSpace
+#VerbosePkgLists
+ILoveCandy
+...
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+...
+------------------------------------------
 ```
 
 ## **Start and enable services**
 
 ```console
-# systemctl enable iwd.service --now
-# systemctl enable dhcpcd.service --now
-# systemctl enable sshd.service --now
+$ sudo systemctl enable --now iwd.service
+$ sudo systemctl enable --now sshd.service
+$ sudo systemctl enable --now systemd-networkd.service
 ```
 
-## **KDE OR...**
+## **Connect**
 
-Nord theme for grep:
+Again...
 
 ```console
-# pacman -S xorg plasma-meta kde-application-meta
-# systemctl enable ssdm.service --now
+$ iwctl station wlan0 connect MyWifiIsThis --passphrase PaSsPhRaSe
 ```
 
-## **...OR DWM**
-
-Nord theme for grep:
+## **Update system**
 
 ```console
-# pacman -S xorg-server xorg-xinit xorg-xrandr xorg-xsetroot
-# ./dmenuinstall.sh
-# ./dwminstall.sh
+$ sudo pacman -Syyu
 ```
 
-## **Packages**
+## **Update Mirrors**
+
+Manually:
+
+```console
+$ wget -O mirrorlist.b "https://archlinux.org/mirrorlist/?country=BR"
+$ sed -i 's/^#//' mirrorlist.b
+$ sudo cp -r /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.bck
+$ sudo rankmirrors -n 8 mirrorlist.b > /etc/pacman.d/mirrorlist
+```
+
+Reflector:
+
+```console
+$ pac reflector
+```
+
+```console
+$ sudo nano /etc/xdg/reflector/reflector.conf
+-------------reflector.conf---------------
+--save /etc/pacman.d/mirrorlist
+--country Brazil,"United States"
+--protocol https
+--latest 10
+--sort age
+------------------------------------------
+$ sudo systemctl enable reflector.service --now
+```
+
+# **Packages**
+
+From here, there will be pacman and AUR-yay packages
+
+### **Installing YAY - AUR Helper**
+
+```console
+$ git clone https://aur.archlinux.org/yay.git
+$ cd yay
+$ makepkg -sirc
+$ alias yay="yay -S --needed"
+```
+
+### **Installs**
 
 Complementary install
 
 ```console
-# pacman -S man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g exfat-utils xclip
+$ pac man-db man-pages mesa lib32-mesa xf86-video-intel pacutils pacman-contrib ntfs-3g exfat-utils xclip
+```
+
+Main programs
+
+```console
+$ pac deluge deluge-gtk steam mpv youtube-dl telegram-desktop discord virtualbox keepassxc (chromium?)
+$ yay skype zoom slack keybase-bin (google-chrome?)
 ```
 
 Fonts
 
 ```console
-# pacman -S ttf-liberation noto-fonts ttf-hack ttf-font-awesome ttf-roboto wqy-zenhei wqy-microhei wqy-microhei-lite
-```
-
-Test
-
-```console
-# pacman -S iproute2 (?)
+$ pac ttf-liberation noto-fonts ttf-hack ttf-font-awesome ttf-roboto wqy-zenhei ttf-joypixels
+$ yay nerd-fonts-mononoki ttf-mononoki
 ```
 
 Terminal tools
 
 ```console
-# pacman -S htop tree lsof mc
+$ pac htop tree lsof mc bat termite
 ```
 
 Archiving and Compression
 
 ```console
-# pacman -S unzip unrar lha
+$ pac unzip unrar lha
 ```
 
 Hardware tools
 
 ```console
-# pacman -S lshw dmidecode lm_sensors
+$ pac lshw dmidecode lm_sensors xow
 ```
 
 Dev tools
 
 ```console
-# pacman -S git hub code python npm
+$ pac git hub code python nodejs npm 
+```
+
+Office
+
+```console
+$ pac libreoffice-fresh
 ```
 
 Media
 
 ```console
-# pacman -S feh playerctl imagemagick ffmpeg gthumb
+$ pac playerctl
 ```
-
-Online Tools
-
-```console
-# pacman -S pccze plowshare
-```
-
-sudo pacman --noconfirm -S   net-tools mtr traceroute dnsutils whois nmap wavemon gnome-nettool sshfs proxychains-ng powerpill
 
 Thinkpad install
 
 ```console
-# pacman -S tpacpi-bat
+$ pac tpacpi-bat
+$ yay upd72020x-fw
 ```
 
-Common programs
+Video editor
 
 ```console
-# pacman -S deluge deluge-gtk steam alacritty mpv youtube-dl telegram discord virtualbox keepassxc
-```
-
-Terminal utilities
-
-```console
-# pacman -S bat
-```
-
-Edition programs
-
-```console
-# pacman -S obs-studio
+$ pac obs-studio
 ```
 
 Wallpaper tools
 
 ```console
-# pacman -S python-pywal
+$ pac python-pywal
 ```
 
 Playful programs
 
 ```console
-# pacman -S cmatrix neofetch figlet lolcat nyancat cowsay ponysay
+$ pac cmatrix neofetch toilet figlet lolcat nyancat cowsay ponysay asciiquarium
+$ yay pipes.sh
 ```
 
-## **AUR Packages**
-
-Installing YAY - AUR Helper
+Other Tools
 
 ```console
-git clone https://aur.archlinux.org/yay.git
-cd yay
-makepkg -sirc
+$ pac pccze plowshare net-tools mtr traceroute dnsutils whois nmap wavemon gnome-nettool sshfs proxychains-ng powerpill imagemagick ffmpeg gthumb
+$ yay dtrx pcmanfm-gtk3-git redshift-gtk-git raccoon
 ```
 
-Install AUR Packages
+# **Post-Install**
+
+## **Install DE or WM**
+
+### **KDE OR...**
+
+Nord theme for grep:
 
 ```console
-yay -S dtrx pcmanfm-gtk3-git ranger-git redshift-gtk-git raccoon wcalc pipes
+$ pac xorg plasma-meta kde-application-meta
+$ sudo systemctl enable ssdm.service --now
 ```
 
-## **Cleaning**
+### **...OR DWM**
+
+Nord theme for grep:
+
+```console
+$ pac xorg-server xorg-xinit xorg-xrandr xorg-xsetroot feh pcmanfm
+$ ./dmenuinstall.sh
+$ ./dwminstall.sh
+```
+
+### **Nano syntax highlighting**
+
+Install
+
+```console
+$ pac nano-syntax-highlighting
+```
+
+Uncomment below
+
+```console
+$ sudo nano /etc/nanorc
+-------------reflector.conf---------------
+include "/usr/share/nano/*.nanorc"
+include "/usr/share/nano-syntax-highlighting/*.nanorc"
+------------------------------------------
+```
+
+### **Sensors**
+```console
+$ sudo sensors-detect
+```
+
+## **Run scripts**
+
+### **Cleaning**
 
 ```console
 # pacman -Rsn $(pacman -Qdtq)
-# pacman -Sc
+# pac -Sc
 ```
 
-## **Theming**
+### **Theming**
 
 Nord theme for grep:
 
@@ -536,7 +608,7 @@ Nord theme for man:
 
 Nord theme for pacman:
 
-## Pacman commands
+### **Pacman commands**
 
 List all availlable packages which match **name**:
 
@@ -568,15 +640,21 @@ List all explicitly installed native packages (i.e. present in the sync database
 # pacman -Qent
 ```
 
-## Aliases
+## **Wallpapers**
+
+Arch: archlinux-wallpaper
+
+## **Aliases**
 
 Check .dot files
 
 ### **To do / study**
 
-[] KVM
-- minimize initramfs
-- initramfs compression
-- Encrypt partitions
-- Automate (partially) install
-- Create bin folder with scripts
+- [ ] KVM
+- [ ] minimize initramfs
+- [ ] initramfs compression
+- [ ] Encrypt partitions
+- [ ] Automate (partially) install
+- [ ] Test zswap compression
+- [ ] 
+- [ ] 
