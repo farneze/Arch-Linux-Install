@@ -5,7 +5,7 @@
 - Thinkpad T440p
 - Processor: i7 4700mq
 - Memory: 16 gb DDR3
-- another test
+- SSD: HP 500GB S700
 
 ## **Known errors**
 
@@ -167,7 +167,7 @@ Install kernel, micro code, sudo and other shell helpers
 If file system is btrfs, also install
 
 ```console
-# pac btrfs-progs 
+# pac btrfs-progs
 ```
 
 Install network
@@ -260,16 +260,19 @@ Defaults rootpw
 Edit mkinitcpio, and under `#HOOKS`:
 
 - if using laptop with external keyboard, place `keyboard` before `autodetect`
-- remove `udev` and insert `systemd`  
+- remove `udev` and insert `systemd`
 (This [post](https://bbs.archlinux.org/viewtopic.php?id=170082) or this [one](https://bbs.archlinux.org/viewtopic.php?id=169988) confirms it)
 - if using `btrfs` add it after `systemd` (or `udev` if you didnt add systemd)
+- for early KMS, check this [link](https://wiki.archlinux.org/index.php/Kernel_mode_setting#Early_KMS_start)
 
-Under `#COMPRESSION`:
+And under `#COMPRESSION`:
  - uncomment LZ4. [link](https://www.dummeraugust.com/main/content/blog/posts.php?pid=173)
 
 ```console
 # nano /etc/mkinitcpio.conf
 --------------mkinitcpio.conf-------------
+...
+MODULES=()
 ...
 HOOKS=(base systemd btrfs keyboard autodetect modconf block filesystems fsck)`
 ...
@@ -357,13 +360,34 @@ Exit, umount any partitions and reboot
 
 # **OS Config**
 
+## **Thinkpad T440p keyboard**
+
+Brazilian keyboards have an AltGr key, so that key was added to a `br-abnt2.map.gz` file and named `br-abnt2-thinkpad.map.gz`
+
+Outside of X11:
+
+```console
+$ cp br-abnt2-thinkpad.map.gz /usr/share/kbd/keymaps/i386/qwerty
+$ loadkeys /usr/share/kbd/keymaps/i386/qwerty/br-abnt2-thinkpad.map
+```
+
+For X11, add:
+```console
+# sudo nano ~/.xinitrc
+-----------------.xinitrc-----------------
+setxkbmap -model abnt2 -layout br
+...
+------------------------------------------
+```
+
+## **Pacman**
 Pacman config:
 - uncomment `Color`
 - add `ILoveCandy` (optional)
 - uncomment [multilib] and `include` line
 
 ```console
-# nano /etc/pacman.conf
+# sudo nano /etc/pacman.conf
 ----------------pacman.conf---------------
 ...
 # Misc options
@@ -470,6 +494,7 @@ Terminal tools
 
 ```console
 $ pac htop tree lsof mc bat termite
+$ yey tty-clock
 ```
 
 Archiving and Compression
@@ -481,13 +506,14 @@ $ pac unzip unrar lha
 Hardware tools
 
 ```console
-$ pac lshw dmidecode lm_sensors xow
+$ pac lshw dmidecode lm_sensors acpi sensors-detect hdparm
+$ xow-git
 ```
 
 Dev tools
 
 ```console
-$ pac git hub code python nodejs npm 
+$ pac git hub code neovim python nodejs npm
 ```
 
 Office
@@ -505,20 +531,26 @@ $ pac playerctl
 Thinkpad install
 
 ```console
-$ pac tpacpi-bat
-$ yay upd72020x-fw
+$ pac tpacpi-bat xf86-input-synaptics
+$ yay upd72020x-fw thinkfan
 ```
 
 Video editor
 
 ```console
-$ pac obs-studio
+$ pac obs-studio libva-intel-driver(?)
 ```
 
 Wallpaper tools
 
 ```console
 $ pac python-pywal
+```
+
+Retro Geming
+
+```console
+$ pac retroarch retroarch-assests-xmb retroarch-assests-ozone
 ```
 
 Playful programs
@@ -537,28 +569,7 @@ $ yay dtrx pcmanfm-gtk3-git redshift-gtk-git raccoon
 
 # **Post-Install**
 
-## **Install DE or WM**
-
-### **KDE OR...**
-
-Nord theme for grep:
-
-```console
-$ pac xorg plasma-meta kde-application-meta
-$ sudo systemctl enable ssdm.service --now
-```
-
-### **...OR DWM**
-
-Nord theme for grep:
-
-```console
-$ pac xorg-server xorg-xinit xorg-xrandr xorg-xsetroot feh pcmanfm
-$ ./dmenuinstall.sh
-$ ./dwminstall.sh
-```
-
-### **Nano syntax highlighting**
+## **Nano syntax highlighting**
 
 Install
 
@@ -576,21 +587,140 @@ include "/usr/share/nano-syntax-highlighting/*.nanorc"
 ------------------------------------------
 ```
 
-### **Sensors**
+## **Auto-Login**
+
+NOT RECOMMENDED
 ```console
-$ sudo sensors-detect
+$ sudo systemctl edit getty@tty1
+---------------getty@tty1-----------------
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/agetty --autologin arnthor --noclear %I $TERM
+------------------------------------------
 ```
 
-## **Run scripts**
+## **Install DE or WM**
 
-### **Cleaning**
+### **KDE OR...**
+
+```console
+$ pac xorg plasma-meta kde-application-meta
+$ sudo systemctl enable ssdm.service --now
+```
+
+### **...OR DWM**
+
+```console
+$ pac xorg-server xorg-xinit xorg-xrandr xorg-xsetroot pcmanfm
+$ ./dmenuinstall.sh
+$ ./dwminstall.sh
+```
+
+Add `exe dwm` to `.xinitrc`
+```console
+$ sudo nano /etc/.xinitrc
+----------------.xinitrc------------------
+exec dwm
+------------------------------------------
+```
+
+## **Sound**
+
+### **ALSA**
+
+```console
+$ pac alsa-utils
+$ amixer -c 1 sset Speaker unmute
+$ amixer -c 1 sset Headphones unmute
+```
+
+Unmute channels through alsamixer or commands:
+
+```console
+$ amixer -c 1 sset Master unmute
+$ amixer -c 1 sset Speaker unmute
+$ amixer -c 1 sset Headphones unmute
+$ amixer -c 1 sset Mic unmute
+```
+
+If more than 2 cards, select the default:
+
+```console
+$ sudo nano /etc/asound.conf
+---------------asound.conf----------------
+defaults.pcm.card 1
+defaults.ctl.card 1
+------------------------------------------
+```
+
+To unmute MIC, open alsamixer, press F3 and SPACE.
+
+### **PulseAudio** (optional)
+
+```console
+$ pac pulseaudio pulseaudio-alsa pulseaudio-bluetooth pulseaudio-equalizer pulseaudio-jack pavucontrol
+```
+
+### **Other packages**
+
+```console
+$ pac
+$ yey xava
+```
+
+## **Screen Tearing** (optional)
+
+Add this file
+
+```console
+$ sudo nano /etc/X11/xorg.conf.d/20-intel.conf
+--------------20-intel.conf---------------
+Section "Device"
+    Identifier "Intel Graphics"
+    Driver "intel"
+    Option "DRI" "3"
+    Option "AccelMethod" "sna"
+    Option "TearFree" "true"
+EndSection
+------------------------------------------
+```
+
+## **Screen turning off** (optional)
+
+Add this file
+
+```console
+$ sudo nano /etc/X11/xorg.conf.d/30-monitor.conf
+-------------30-monitor.conf--------------
+Section "Monitor"
+    Identifier "LG-UW"
+    Option "DPMS" "false"
+EndSection
+
+Section "ServerFlags"
+    Option "StandbyTime" "0"
+    Option "SuspendTime" "0"
+    Option "OffTime" "0"
+    Option "BlankTime" "0"
+EndSection
+
+Section "ServerLayout"
+    Identifier "ServerLayout0"
+EndSection
+------------------------------------------
+```
+
+## **Thinkpad**
+
+
+# **Cleaning**
 
 ```console
 # pacman -Rsn $(pacman -Qdtq)
 # pac -Sc
 ```
 
-### **Theming**
+# **Theming**
 
 Nord theme for grep:
 
@@ -598,35 +728,7 @@ Nord theme for grep:
 # export GREP_COLORS='ms=01;38;2;136;192;208'
 ```
 
-Nord theme for LS:
-
-```console
-#
-```
-
-Nord theme for man:
-
-Nord theme for pacman:
-
-### **Pacman commands**
-
-List all availlable packages which match **name**:
-
-```console
-pacman -Ss [ name ]
-```
-
-Installs package whith **name**:
-
-```console
-# pacman -S [ name ]
-```
-
-List all explicitly installed packages:
-
-```console
-# pacman -Qe
-```
+# **Pacman commands**
 
 List all foreign packages (typically manually downloaded and installed or packages removed from the repositories):
 
@@ -640,15 +742,17 @@ List all explicitly installed native packages (i.e. present in the sync database
 # pacman -Qent
 ```
 
-## **Wallpapers**
+# **Wallpapers**
 
-Arch: archlinux-wallpaper
+```console
+# pac archlinux-wallpaper nitrogen feh
+```
 
-## **Aliases**
+# **Aliases**
 
 Check .dot files
 
-### **To do / study**
+# **To do / study**
 
 - [ ] KVM
 - [ ] minimize initramfs
@@ -656,5 +760,3 @@ Check .dot files
 - [ ] Encrypt partitions
 - [ ] Automate (partially) install
 - [ ] Test zswap compression
-- [ ] 
-- [ ] 
